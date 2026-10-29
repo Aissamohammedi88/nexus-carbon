@@ -27,22 +27,69 @@ Sémantique v1.1 :
   - AND / OR même précédence, associativité gauche, pas de parenthèses
     dans les conditions (documenté).
 """
+
 from __future__ import annotations
 
 from nexus_cobol_lexer import lex_file, lex_text
 
 KEYWORDS = {
-    "IDENTIFICATION", "DATA", "PROCEDURE", "DIVISION", "SECTION",
-    "WORKING-STORAGE", "PROGRAM-ID", "AUTHOR", "PIC", "VALUE",
-    "DISPLAY", "MOVE", "COMPUTE", "ADD", "SUBTRACT", "MULTIPLY", "DIVIDE",
-    "TO", "FROM", "BY", "GIVING", "INTO",
-    "IF", "THEN", "ELSE", "END-IF", "EVALUATE", "WHEN", "OTHER", "END-EVALUATE",
-    "PERFORM", "END-PERFORM", "UNTIL", "VARYING", "TIMES",
-    "STOP", "RUN", "AND", "OR",
-    "SCAN-FILE", "REPORTING", "PROBE-FILE", "RULE", "PATCH-FILE", "SWEEP-PATH",
-    "REMEMBER", "RECALL", "ASK-GLM",
-    "CONTEXT-LOAD", "FILE", "LIMIT", "CONTEXT-SEARCH", "NOTE-METRIC",
-    "ZERO", "ZEROS", "SPACE", "SPACES",
+    "IDENTIFICATION",
+    "DATA",
+    "PROCEDURE",
+    "DIVISION",
+    "SECTION",
+    "WORKING-STORAGE",
+    "PROGRAM-ID",
+    "AUTHOR",
+    "PIC",
+    "VALUE",
+    "DISPLAY",
+    "MOVE",
+    "COMPUTE",
+    "ADD",
+    "SUBTRACT",
+    "MULTIPLY",
+    "DIVIDE",
+    "TO",
+    "FROM",
+    "BY",
+    "GIVING",
+    "INTO",
+    "IF",
+    "THEN",
+    "ELSE",
+    "END-IF",
+    "EVALUATE",
+    "WHEN",
+    "OTHER",
+    "END-EVALUATE",
+    "PERFORM",
+    "END-PERFORM",
+    "UNTIL",
+    "VARYING",
+    "TIMES",
+    "STOP",
+    "RUN",
+    "AND",
+    "OR",
+    "SCAN-FILE",
+    "REPORTING",
+    "PROBE-FILE",
+    "RULE",
+    "PATCH-FILE",
+    "SWEEP-PATH",
+    "REMEMBER",
+    "RECALL",
+    "ASK-GLM",
+    "CONTEXT-LOAD",
+    "FILE",
+    "LIMIT",
+    "CONTEXT-SEARCH",
+    "NOTE-METRIC",
+    "ZERO",
+    "ZEROS",
+    "SPACE",
+    "SPACES",
 }
 
 RELOPS = {"=", "<>", "!=", ">", "<", ">=", "<="}
@@ -382,9 +429,7 @@ class Parser:
             else:
                 break
         if not items:
-            raise NexusSyntaxError(
-                f"DISPLAY sans élément (ligne {self.peek()[2]})"
-            )
+            raise NexusSyntaxError(f"DISPLAY sans élément (ligne {self.peek()[2]})")
         return ("DISPLAY", items)
 
     def p_move(self):
@@ -471,8 +516,7 @@ class Parser:
             cond = self.parse_cond()
             if self.peek_sym("."):
                 raise NexusSyntaxError(
-                    "PERFORM UNTIL inline exige END-PERFORM "
-                    "(ligne {self.peek()[2]})"
+                    "PERFORM UNTIL inline exige END-PERFORM " "(ligne {self.peek()[2]})"
                 )
             body = self.parse_block({"END-PERFORM"})
             self.expect_kw("END-PERFORM")
@@ -507,9 +551,7 @@ class Parser:
                 self.expect_kw("TIMES")
                 return ("PERFORM", "para_times", name, times)
             return ("PERFORM", "para", name)
-        raise NexusSyntaxError(
-            f"forme PERFORM non reconnue (ligne {self.peek()[2]})"
-        )
+        raise NexusSyntaxError(f"forme PERFORM non reconnue (ligne {self.peek()[2]})")
 
     def p_perform_tail_varying(self, var, frm, by, cond):
         kind, val, _, _ = self.peek()
