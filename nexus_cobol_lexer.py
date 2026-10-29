@@ -10,6 +10,7 @@ Un token = (kind, value, line, first_on_line)
     first_on_line sert au parser pour reconnaître les paragraphes
     (un paragraphe = identificateur en tête de ligne suivi d'un point).
 """
+
 from __future__ import annotations
 
 import re
@@ -39,9 +40,7 @@ def lex_text(text: str) -> List[Token]:
     while pos < n:
         m = _TOKEN_RE.match(text, pos)
         if m is None:
-            raise SyntaxError(
-                f"caractère illégal {text[pos]!r} à la ligne {line}"
-            )
+            raise SyntaxError(f"caractère illégal {text[pos]!r} à la ligne {line}")
         kind = m.lastgroup
         raw = m.group()
         if kind == "WS":
