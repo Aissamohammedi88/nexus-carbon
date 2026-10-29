@@ -42,7 +42,9 @@ SCAN_BIN = NEXUS_HOME / "scanner" / "target" / "release" / "nexus_scan"
 
 VERSION = "1.1.0"
 CODENAME = "NOBLE"
-PROTOCOL = "ULTRA v1.0 (U-nfiltered, L-ong-horizon, T-est-proof, R-ust-core, A-utonomous)"
+PROTOCOL = (
+    "ULTRA v1.0 (U-nfiltered, L-ong-horizon, T-est-proof, R-ust-core, A-utonomous)"
+)
 
 LABEL_PROOF = "[nexus-proof]"
 LABEL_ADVISORY = "[glm-advisory]"
@@ -60,6 +62,7 @@ def proof(msg: str) -> None:
 # ============================================================
 # §1 LEDGER — le registre de mission (Long-horizon, ULTRA: L)
 # ============================================================
+
 
 class Ledger:
     """Registre de mission JSON. Chaque étape y est consignée, y compris
@@ -116,6 +119,7 @@ class Ledger:
 # §2 SCANNER — Finding (module Rust, ULTRA: R)
 # ============================================================
 
+
 class Scanner:
     """Wrapper du binaire Rust nexus_scan. Le scanner ne ment pas :
     il sort du JSON, le banc le vérifie."""
@@ -154,6 +158,7 @@ class Scanner:
 # §3 EXPLOIT GYM — sondes contrôlées (ULTRA: T)
 # ============================================================
 
+
 class ExploitGym:
     """Sondes contrôlées et INOFFENSIVES : elles prouvent l'exploitabilité
     sans casser quoi que ce soit. Un finding non confirmé n'est jamais
@@ -162,7 +167,9 @@ class ExploitGym:
     EVAL_PAYLOAD = '__import__("os").getpid()'
     SQL_PAYLOAD = "1 OR 1=1"
 
-    def _run(self, file: str, arg: str, timeout: int = 10) -> subprocess.CompletedProcess:
+    def _run(
+        self, file: str, arg: str, timeout: int = 10
+    ) -> subprocess.CompletedProcess:
         return subprocess.run(
             ["python3", file, arg], capture_output=True, text=True, timeout=timeout
         )
@@ -172,53 +179,68 @@ class ExploitGym:
         out = proc.stdout.strip()
         if proc.returncode == 0 and out.isdigit():
             return {
-                "rule": "eval", "status": "confirmed",
+                "rule": "eval",
+                "status": "confirmed",
                 "evidence": f"charge '__import__' exécutée : pid={out} retourné "
-                            f"(exécution de code arbitraire prouvée)",
+                f"(exécution de code arbitraire prouvée)",
             }
         if proc.returncode != 0:
             return {
-                "rule": "eval", "status": "blocked",
+                "rule": "eval",
+                "status": "blocked",
                 "evidence": f"charge rejetée (exit={proc.returncode}) : "
-                            f"{(proc.stderr.strip().splitlines() or ['?'])[-1][:80]}",
+                f"{(proc.stderr.strip().splitlines() or ['?'])[-1][:80]}",
             }
-        return {"rule": "eval", "status": "inconclusive",
-                "evidence": f"exit=0 mais sortie non numérique : {out[:60]!r}"}
+        return {
+            "rule": "eval",
+            "status": "inconclusive",
+            "evidence": f"exit=0 mais sortie non numérique : {out[:60]!r}",
+        }
 
     def probe_sql(self, file: str) -> dict:
         proc = self._run(file, self.SQL_PAYLOAD)
         out = proc.stdout
         if "WHERE id = 1 OR 1=1" in out:
             return {
-                "rule": "sql_concat", "status": "confirmed",
+                "rule": "sql_concat",
+                "status": "confirmed",
                 "evidence": "l'entrée '1 OR 1=1' a modifié la requête SQL "
-                            "(injection confirmée)",
+                "(injection confirmée)",
             }
         if "WHERE id = ?" in out and "WHERE id = 1 OR 1=1" not in out:
             return {
-                "rule": "sql_concat", "status": "blocked",
+                "rule": "sql_concat",
+                "status": "blocked",
                 "evidence": "l'entrée est isolée dans les paramètres, la requête "
-                            "SQL reste 'WHERE id = ?'",
+                "SQL reste 'WHERE id = ?'",
             }
-        return {"rule": "sql_concat", "status": "inconclusive",
-                "evidence": f"sortie inattendue : {out.strip()[:60]!r}"}
+        return {
+            "rule": "sql_concat",
+            "status": "inconclusive",
+            "evidence": f"sortie inattendue : {out.strip()[:60]!r}",
+        }
 
     def probe_dyn_import(self, file: str) -> dict:
         proc = self._run(file, "os")
         out = proc.stdout.strip()
         if "loaded os" in out:
             return {
-                "rule": "dyn_import", "status": "confirmed",
+                "rule": "dyn_import",
+                "status": "confirmed",
                 "evidence": "module arbitraire 'os' chargé dynamiquement",
             }
         if proc.returncode != 0:
             return {
-                "rule": "dyn_import", "status": "blocked",
+                "rule": "dyn_import",
+                "status": "blocked",
                 "evidence": f"chargement refusé (exit={proc.returncode}) : "
-                            f"{(proc.stderr.strip().splitlines() or ['?'])[-1][:80]}",
+                f"{(proc.stderr.strip().splitlines() or ['?'])[-1][:80]}",
             }
-        return {"rule": "dyn_import", "status": "inconclusive",
-                "evidence": f"sortie inattendue : {out[:60]!r}"}
+        return {
+            "rule": "dyn_import",
+            "status": "inconclusive",
+            "evidence": f"sortie inattendue : {out[:60]!r}",
+        }
 
     def run(self, file: str, rule: str) -> dict:
         probes = {
@@ -228,9 +250,12 @@ class ExploitGym:
         }
         fn = probes.get(rule)
         if fn is None:
-            return {"rule": rule, "status": "inconclusive",
-                    "evidence": "aucune sonde implémentée pour cette règle (v1.0 : "
-                                "eval, sql_concat, dyn_import)"}
+            return {
+                "rule": rule,
+                "status": "inconclusive",
+                "evidence": "aucune sonde implémentée pour cette règle (v1.0 : "
+                "eval, sql_concat, dyn_import)",
+            }
         result = fn(file)
         result["file"] = file
         return result
@@ -240,7 +265,7 @@ class ExploitGym:
 # §4 PATCHER — stratégies + persistance (ULTRA: L + T)
 # ============================================================
 
-SAFE_EVAL_BLOCK = '''# [nexus-patch] strategy ast_whitelist_safeeval — injected by GPTNexus
+SAFE_EVAL_BLOCK = """# [nexus-patch] strategy ast_whitelist_safeeval — injected by GPTNexus
 # Même logique que PROTON-Calc de DGK : évaluateur AST à liste blanche.
 import ast as _n_ast
 
@@ -280,9 +305,9 @@ def _nexus_safe_eval(expr):
         raise ValueError("nexus_safe_eval: expression not allowed")
 
     return _ev(_n_ast.parse(expr, mode="eval"))
-'''
+"""
 
-WHITELIST_IMPORT_BLOCK = '''# [nexus-patch] strategy whitelist_importlib — injected by GPTNexus
+WHITELIST_IMPORT_BLOCK = """# [nexus-patch] strategy whitelist_importlib — injected by GPTNexus
 import importlib as _n_importlib
 
 _NEXUS_ALLOWED_MODULES = ("math", "json", "statistics")
@@ -292,7 +317,7 @@ def _nexus_import(name):
     if name not in _NEXUS_ALLOWED_MODULES:
         raise ImportError("module not whitelisted by nexus: %r" % (name,))
     return _n_importlib.import_module(name)
-'''
+"""
 
 
 def _insert_code(content: str, block: str) -> str:
@@ -384,13 +409,26 @@ class Patcher:
                 proc = subprocess.run(
                     ["python3", file, "5"], capture_output=True, text=True, timeout=10
                 )
-                if proc.returncode == 0 and "WHERE id = ?" in proc.stdout and "5" in proc.stdout:
-                    return True, "usage légitime préservé : get_user(5) -> requête paramétrée"
-                return False, "usage légitime cassé : get_user(5) ne renvoie pas une requête paramétrée"
+                if (
+                    proc.returncode == 0
+                    and "WHERE id = ?" in proc.stdout
+                    and "5" in proc.stdout
+                ):
+                    return (
+                        True,
+                        "usage légitime préservé : get_user(5) -> requête paramétrée",
+                    )
+                return (
+                    False,
+                    "usage légitime cassé : get_user(5) ne renvoie pas une requête paramétrée",
+                )
 
             if rule == "dyn_import":
                 proc = subprocess.run(
-                    ["python3", file, "math"], capture_output=True, text=True, timeout=10
+                    ["python3", file, "math"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
                 )
                 if proc.returncode == 0 and "loaded math" in proc.stdout:
                     return True, "usage légitime préservé : load_module('math') OK"
@@ -424,10 +462,21 @@ class Patcher:
         backup = path.with_suffix(path.suffix + ".bak")
         strategies = self.STRATEGIES.get(rule)
         if not strategies:
-            self.ledger.append({"step": "patch", "file": file, "rule": rule,
-                                "status": "not_applicable",
-                                "reason": "aucune stratégie pour cette règle (v1.0)"})
-            return {"file": file, "rule": rule, "status": "no_strategy", "dead_ends": []}
+            self.ledger.append(
+                {
+                    "step": "patch",
+                    "file": file,
+                    "rule": rule,
+                    "status": "not_applicable",
+                    "reason": "aucune stratégie pour cette règle (v1.0)",
+                }
+            )
+            return {
+                "file": file,
+                "rule": rule,
+                "status": "no_strategy",
+                "dead_ends": [],
+            }
 
         original = path.read_text(encoding="utf-8")
         shutil.copy2(path, backup)
@@ -437,33 +486,68 @@ class Patcher:
             new_content, err = fn(original)
             if new_content is None:
                 dead_ends.append({"strategy": name, "reason": err})
-                self.ledger.append({"step": "patch", "file": file, "rule": rule,
-                                    "strategy": name, "status": "dead_end", "reason": err})
+                self.ledger.append(
+                    {
+                        "step": "patch",
+                        "file": file,
+                        "rule": rule,
+                        "strategy": name,
+                        "status": "dead_end",
+                        "reason": err,
+                    }
+                )
                 continue
             path.write_text(new_content, encoding="utf-8")
             ok, reason = self.verify(str(path), rule)
             if ok:
-                self.ledger.append({"step": "patch", "file": file, "rule": rule,
-                                    "strategy": name, "status": "success",
-                                    "reason": reason})
-                return {"file": file, "rule": rule, "status": "success",
-                        "strategy": name, "dead_ends": dead_ends}
+                self.ledger.append(
+                    {
+                        "step": "patch",
+                        "file": file,
+                        "rule": rule,
+                        "strategy": name,
+                        "status": "success",
+                        "reason": reason,
+                    }
+                )
+                return {
+                    "file": file,
+                    "rule": rule,
+                    "status": "success",
+                    "strategy": name,
+                    "dead_ends": dead_ends,
+                }
             dead_ends.append({"strategy": name, "reason": reason})
-            self.ledger.append({"step": "patch", "file": file, "rule": rule,
-                                "strategy": name, "status": "dead_end", "reason": reason})
+            self.ledger.append(
+                {
+                    "step": "patch",
+                    "file": file,
+                    "rule": rule,
+                    "strategy": name,
+                    "status": "dead_end",
+                    "reason": reason,
+                }
+            )
 
         # épuisement du budget : restauration honnête
         path.write_text(original, encoding="utf-8")
         backup.unlink(missing_ok=True)
-        self.ledger.append({"step": "patch", "file": file, "rule": rule,
-                            "status": "budget_exhausted",
-                            "dead_ends": [d["strategy"] for d in dead_ends]})
+        self.ledger.append(
+            {
+                "step": "patch",
+                "file": file,
+                "rule": rule,
+                "status": "budget_exhausted",
+                "dead_ends": [d["strategy"] for d in dead_ends],
+            }
+        )
         return {"file": file, "rule": rule, "status": "failed", "dead_ends": dead_ends}
 
 
 # ============================================================
 # §5 GLM BRAIN — cerveau consultatif (famille DGK x GLM)
 # ============================================================
+
 
 class GLMBrain:
     """Le membre glm [ai-brain] de la famille, branché en vrai via le CLI
@@ -476,7 +560,10 @@ class GLMBrain:
     def ask(self, prompt: str, system: str | None = None, timeout: int = 180) -> str:
         if not self.cli:
             raise RuntimeError("CLI z-ai introuvable — GLM indisponible")
-        out_path = Path(tempfile.gettempdir()) / f"nexus_glm_{os.getpid()}_{int(time.time())}.json"
+        out_path = (
+            Path(tempfile.gettempdir())
+            / f"nexus_glm_{os.getpid()}_{int(time.time())}.json"
+        )
         cmd = [self.cli, "chat", "-p", prompt]
         if system:
             cmd += ["-s", system]
@@ -508,6 +595,7 @@ class GLMBrain:
 # §6 PIPELINE SWEEP — autonomie (ULTRA: A)
 # ============================================================
 
+
 def cmd_sweep(path: str, as_json: bool = False) -> int:
     scanner = Scanner()
     root = Path(path)
@@ -517,14 +605,27 @@ def cmd_sweep(path: str, as_json: bool = False) -> int:
     patcher = Patcher(ledger, gym)
 
     result = scanner.scan(path)
-    ledger.append({"step": "scan", "path": path,
-                   "findings": result["count"], "files": result["files_scanned"]})
+    ledger.append(
+        {
+            "step": "scan",
+            "path": path,
+            "findings": result["count"],
+            "files": result["files_scanned"],
+        }
+    )
 
     confirmed: list[tuple[str, str]] = []
     for f in result["findings"]:
         probe = gym.run(f["file"], f["rule"])
-        ledger.append({"step": "exploit", "file": f["file"], "rule": f["rule"],
-                       "status": probe["status"], "evidence": probe["evidence"]})
+        ledger.append(
+            {
+                "step": "exploit",
+                "file": f["file"],
+                "rule": f["rule"],
+                "status": probe["status"],
+                "evidence": probe["evidence"],
+            }
+        )
         if probe["status"] == "confirmed":
             confirmed.append((f["file"], f["rule"]))
 
@@ -539,18 +640,31 @@ def cmd_sweep(path: str, as_json: bool = False) -> int:
 
     rules_remaining = {(f["file"], f["rule"]) for f in rescan["findings"]}
     leaked = [f"{f} :: {r}" for f, r in confirmed if (f, r) in rules_remaining]
-    final = "success" if (patched_ok and not leaked and rescan["count"] == 0) else "partial"
+    final = (
+        "success" if (patched_ok and not leaked and rescan["count"] == 0) else "partial"
+    )
     ledger.set_final(final)
 
     if as_json:
-        print(json.dumps({
-            "path": path, "findings_initial": result["count"],
-            "confirmed": len(confirmed), "rescan": rescan["count"],
-            "final": final, "ledger": str(ledger.path),
-        }, ensure_ascii=False, indent=2))
+        print(
+            json.dumps(
+                {
+                    "path": path,
+                    "findings_initial": result["count"],
+                    "confirmed": len(confirmed),
+                    "rescan": rescan["count"],
+                    "final": final,
+                    "ledger": str(ledger.path),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
     else:
-        proof(f"sweep terminé : {result['count']} findings -> {len(confirmed)} confirmés "
-              f"-> rescan {rescan['count']} restant(s) -> final={final}")
+        proof(
+            f"sweep terminé : {result['count']} findings -> {len(confirmed)} confirmés "
+            f"-> rescan {rescan['count']} restant(s) -> final={final}"
+        )
         if leaked:
             say(f"règles non neutralisées : {leaked}")
         say(f"registre de mission : {ledger.path}")
@@ -561,14 +675,17 @@ def cmd_sweep(path: str, as_json: bool = False) -> int:
 # §7 COMMANDES CLI
 # ============================================================
 
+
 def cmd_scan(path: str, as_json: bool = False) -> int:
     scanner = Scanner()
     result = scanner.scan(path)
     if as_json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:
-        say(f"scan de {path} : {result['files_scanned']} fichier(s), "
-            f"{result['count']} détection(s)")
+        say(
+            f"scan de {path} : {result['files_scanned']} fichier(s), "
+            f"{result['count']} détection(s)"
+        )
         print(scanner.human_summary(result))
     return 0
 
@@ -579,8 +696,11 @@ def cmd_exploit(file: str, rule: str, as_json: bool = False) -> int:
     if as_json:
         print(json.dumps(probe, ensure_ascii=False, indent=2))
     else:
-        label = {"confirmed": "CONFIRMÉ", "blocked": "BLOQUÉ",
-                 "inconclusive": "NON CONCLUANT"}
+        label = {
+            "confirmed": "CONFIRMÉ",
+            "blocked": "BLOQUÉ",
+            "inconclusive": "NON CONCLUANT",
+        }
         proof(f"sonde {rule} sur {file} : {label.get(probe['status'], '?')}")
         say(f"preuve : {probe['evidence']}")
     return 0 if probe["status"] in ("confirmed", "blocked") else 1
@@ -613,13 +733,20 @@ def cmd_patch(file: str, rule: str | None, as_json: bool = False) -> int:
     ledger.set_final(overall if rules else "nothing_to_do")
 
     if as_json:
-        print(json.dumps({"file": file, "results": all_results,
-                          "final": overall}, ensure_ascii=False, indent=2))
+        print(
+            json.dumps(
+                {"file": file, "results": all_results, "final": overall},
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
     else:
         for res in all_results:
             if res["status"] == "success":
-                proof(f"patch {res['rule']} RÉUSSI via {res['strategy']} "
-                      f"(impasses traversées : {len(res['dead_ends'])})")
+                proof(
+                    f"patch {res['rule']} RÉUSSI via {res['strategy']} "
+                    f"(impasses traversées : {len(res['dead_ends'])})"
+                )
                 for d in res["dead_ends"]:
                     say(f"impasse {d['strategy']} : {d['reason']}")
             else:
@@ -654,7 +781,9 @@ def cmd_ask(question: str) -> int:
 def cmd_brief(path: str) -> int:
     scanner = Scanner()
     result = scanner.scan(path)
-    say(f"scan : {result['count']} détection(s) sur {result['files_scanned']} fichier(s)")
+    say(
+        f"scan : {result['count']} détection(s) sur {result['files_scanned']} fichier(s)"
+    )
     brain = GLMBrain()
     try:
         answer = brain.brief(result)
@@ -693,7 +822,9 @@ def cmd_version() -> int:
     print(f"langage   : NEXUS-COBOL v1.1 — verbes COBOL + verbes systémiques")
     print(f"mémoire   : ContextEngine local 1M tokens (heuristique 4 chars/token)")
     if SCAN_BIN.exists():
-        proc = subprocess.run([str(SCAN_BIN), "--version"], capture_output=True, text=True)
+        proc = subprocess.run(
+            [str(SCAN_BIN), "--version"], capture_output=True, text=True
+        )
         print(f"scanner   : {proc.stdout.strip()}")
     else:
         print("scanner   : non compilé (./gptnexus.sh build)")

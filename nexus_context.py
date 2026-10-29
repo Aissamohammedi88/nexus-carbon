@@ -10,6 +10,7 @@ documentée, pas une promesse de tokenizer exact.
 Usage CLI :
     python3 nexus_context.py --load FILE [--limit N] [--query Q] [--json]
 """
+
 from __future__ import annotations
 
 import json
@@ -112,7 +113,11 @@ def main_cli(argv: list) -> int:
     st = engine.stats()
     hits = engine.search(query) if query else []
     if as_json:
-        print(json.dumps({"load": info, "stats": st, "hits": hits}, ensure_ascii=False, indent=2))
+        print(
+            json.dumps(
+                {"load": info, "stats": st, "hits": hits}, ensure_ascii=False, indent=2
+            )
+        )
     else:
         print(
             f"CONTEXT {load}: {st['tokens']} TOKENS ({st['chunks']} CHUNKS) "
