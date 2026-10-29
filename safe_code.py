@@ -15,7 +15,7 @@ import math
 def area(radius):
     if radius < 0:
         raise ValueError("radius must be non-negative")
-    return math.pi * radius ** 2
+    return math.pi * radius**2
 
 
 def classify(n):
