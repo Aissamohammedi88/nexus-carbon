@@ -1,0 +1,25 @@
+*> ============================================================
+*> GPTNEXUS NOBLE — DEMO DU LANGUAGE SYSTEMIQUE (DGK x GLM)
+*> Le COBOL de DGK invoque les pouvoirs de GPTNexus directement :
+*> scan, sonde d'exploit, memoire persistante, metriques.
+*> ============================================================
+IDENTIFICATION DIVISION.
+PROGRAM-ID. DEMO-MONSTRE.
+AUTHOR. DGK.
+DATA DIVISION.
+WORKING-STORAGE SECTION.
+01 ETAPE PIC 9(3) VALUE 0.
+PROCEDURE DIVISION.
+MAIN-PARA.
+    DISPLAY "=== GPTNEXUS NOBLE — LANGUAGE SYSTEMIQUE ==="
+    PERFORM ETAPES 3 TIMES
+    IF ETAPE = 3 THEN DISPLAY "MONSTRE NOBLE OPERATIONNEL" END-IF
+    SCAN-FILE "fixtures/vuln_eval.py"
+    PROBE-FILE "fixtures/vuln_eval.py" RULE "eval"
+    REMEMBER "demo-noble" VALUE "v1.1"
+    RECALL "demo-noble" DISPLAY
+    NOTE-METRIC "demo-noble" VALUE 1
+    STOP RUN.
+ETAPES.
+    ADD 1 TO ETAPE
+    DISPLAY "ETAPE " ETAPE.
